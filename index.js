@@ -23,6 +23,9 @@ const player = {
 
 const couchbase = require('couchbase');
 
+testingUpsert();
+
+
 async function main() {
     const cluster = await couchbase.connect('couchbase://localhost', {
         username: 'Administrator',
@@ -36,23 +39,25 @@ async function main() {
 
 }
 
-const upsertPrecious001 = async (doc, collection) => {
+async function testingUpsert() {
+    const cluster = await couchbase.connect('couchbase://localhost', {
+        username: 'rizzy',
+        password: 'password'
+    });
+
+    const bucket = cluster.bucket('default');
+    const collection = bucket.defaultCollection();
+
     try {
-        const key = 'player_001';
-        const result = await collection.upsert(key, doc)
-        console.log('Result from Upsertion: ');
-        console.log(result)
-    } catch(error) {
+        const result = await collection.upsert(player.personId, player);
+        console.log("Result: " , result);
+    } catch (error) {
         console.error(error);
     }
+ 
 }
 
-
-
-main().catch((err) => {
-    console.log('Error -- ', err)
-    process.exit()
-}).then(process.exit);
-
-
-
+// main().catch((err) => {
+//     console.log('Error -- ', err)
+//     process.exit()
+// }).then(process.exit);
