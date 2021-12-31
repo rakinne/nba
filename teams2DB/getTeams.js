@@ -4,6 +4,7 @@ import fetch from 'node-fetch';
 const main = (teams) => 
 {
     console.log(teams);
+    console.log(teams.length)
 }
 
 function resolveAllTeams() {
@@ -28,12 +29,15 @@ function populateLeagueWith(teams)
     main(teams);
 }
 
-async function _fetch(url) 
+const placeTeam = async (teams) =>
 {
 
+}
+
+async function _fetch(url) 
+{
     const response = await fetch(url)
     return await response.json()
-
 }
 
 resolveAllTeams();
