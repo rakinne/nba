@@ -1,15 +1,40 @@
-const { Team } = require('./Team');
-const fetch = require('node-fetch');
+import { Team } from './Team.js';
+import fetch from 'node-fetch';
 
-let teams;
+const main = (teams) => 
+{
+    console.log(teams);
+}
 
-const main  = async () => {
+function resolveAllTeams() {
 
-    let response = await fetch('http://data.nba.net/prod/v2/2021/teams.json')
+    _fetch('http://data.nba.net/prod/v2/2021/teams.json').then((json) => 
+    {
+        const standardLeagueTeams = json.league.standard;
+        let TEAMS = [];
+
+        standardLeagueTeams.forEach(team => 
+        {
+            TEAMS.push(new Team(team.fullName, team.teamId, team.nickname, team.confName))
+        });
+
+        populateLeagueWith(TEAMS);
+
+    }).catch((err) => console.error(err));
+}
+
+function populateLeagueWith(teams) 
+{   // This function will be the starting point to populating my array
+    main(teams);
+}
+
+async function _fetch(url) 
+{
+
+    const response = await fetch(url)
     return await response.json()
 
 }
 
-main().then((json) => {
-    console.log(json.league.standard)
-}).catch((err) => console.error(err));
+resolveAllTeams();
+// getAllTeams();

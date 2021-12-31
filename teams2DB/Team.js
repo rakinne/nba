@@ -10,3 +10,5 @@ class Team {
     getNickname() { return this.nickname };
     getConference() { return this.conference };
 }
+
+export { Team };
