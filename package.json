@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "couchbase": "^3.2.4",
-    "node-fetch": "^3.1.0"
+    "node-fetch": "^3.1.0",
+    "pg": "^8.7.1"
   }
 }

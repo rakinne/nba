@@ -12,9 +12,12 @@ class Database
 {
     constructor(nameOfBucket)
     {
-        this.bucket = '';
-        this.collection = '';
-        this.nameOfBucket = nameOfBucket;
+        this.cluster;
+        this.bucket = nameOfBucket;
+        this.collection;
+        this.hardCodedName = 'NBA'
+    
+        this.connectServer();
     }
 
     insertMultipleDocuments(documents)
@@ -46,27 +49,35 @@ class Database
     }
 
     async connectServer() 
-    {   // TODO: I suspect this function needs proper async handling
+    {   // (fixme): I suspect this function needs proper async handling
         // to ensure ( THIS.BUCKET ) is set to the correct value ...
         // thus guaranteeing we have a valid ( THIS.COLLECTION ) set
         // for #createCollection and #insertIntoCollection
-        couchbase.connect('couchbase://localhost', OPTIONS)
-        .then((cluster) => this.#getNameFrom(cluster));
+        try {
+            this.cluster = await couchbase.connect('couchbase://localhost', OPTIONS)
+            console.log('Server Connected!')
+            console.log('Passing Cluster Name Now...')
+            this.#setBucketCluster()
+        } catch (err) {
+            console.error(err);
+        }
     }
 
-    #getNameFrom(cluster)
+    #setBucketCluster()
     {
-        this.bucket = cluster.bucket(this.nameOfBucket); // may fail
-        this.#createCollection();
+        try {
+            this.bucket = this.cluster.bucket(this.bucket); // may fail
+            console.log('Bucket from createBucketUsing: ', this.bucket)
+        } catch (err) {
+            console.log(err)
+        }
     }
 
-    #createCollection()
+    async createCollection(scope, collectionName)
     {
-        // TODO: As currently built, we operate as though we know exacly that nameOfBucket provided
-        // when creating a new Database object, is the same as available buckets in Database
-        // In future iterations we must error handle to ensure a name provided === available buckets
-
-        this.collection = this.bucket.collection()
+        const query = `CREATE COLLECTION ${this.bucket}.${scope}.${collectionName}`
+        let queryResult = await this.cluster.query(query);
+        console.log(queryResult);
     }
 }
 
