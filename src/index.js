@@ -13,16 +13,24 @@ const main = async () =>
     const cluster = await couchbase.connect('couchbase://localhost', OPTIONS)
     const bucket = cluster.bucket('NBA');
 
-    let teams = {};
+    createScope('east', cluster, bucket.name);
+    createScope('west', cluster, bucket.name);
+
+    let teamsByID = {};
+    let teamsByConference = {};
 
     const response = await fetch(TEAM_API)
     const body = await response.json().catch((err) => console.error(err))
     body.league.standard.forEach(team => 
     {
-        teams[team.Id] = team.nickname.toLowerCase()
+        if (team.isNBAFranchise === false) { return }
+        if (team.nickname.includes(" ")) { team.nickname.replace(/\s/g, "")}
+        if (team.nickname === '76ers') { team.nickname = team.urlName }
+        teamsByID[team.teamId] = team.nickname.toLowerCase()
+        teamsByConference[team.teamId] = team.confName.toLowerCase();
+        
         createCollection(team.nickname.toLowerCase(), cluster, bucket.name, team.confName.toLowerCase())
     })
-
 
     _fetchPlayers(PLAYER_API)
 
@@ -31,45 +39,53 @@ const main = async () =>
         const res = await fetch(url);
         const body = await res.json().catch((err) => console.error(err))
         body.league.standard.forEach(player => {
-            let playerTeam = findTeamByID(player.teamId);
+            if (player.isActive === false) { return } // if not active player, continue. Using return inside of forEach equivalent functionality to continue
+            
+            let playerTeam = findTeamById(player.teamId);
+            let playerTeamConferenceForScope = findTeamConf(player.teamId)
             let playerDocument = {
                 "firstName": player.firstName,
                 "lastName": player.lastName,
                 "personID": player.personId,
+                "teamID": player.teamId,
                 "jersey": player.jersey,
                 "position": player.pos,
                 "height": player.heightFeet + "'" + player.heightInches,
                 "dateOfBirth": player.dateOfBirthUTC
             }
-            insertIntoCollection(playerTeam, playerDocument, player.personId)
+
+            insertIntoCollection(playerTeam, playerDocument, player.personId, playerTeamConferenceForScope)
         })
     }
 
     async function createScope(scope, cluster, bucket)
     {
         const query = `CREATE SCOPE ${bucket}.${scope}`;
-        const queryResult = await cluster.query(query).catch((err) => {console.log(err)})
-        console.log('Scope Creation Successful...');
+        const queryResult = await cluster.query(query).catch((err) => {console.log(err.context)})
     }
 
     async function createCollection(collection, cluster, bucket, scope)
     {
         const query = `CREATE COLLECTION ${bucket}.${scope}.${collection}`;
-        const queryResult = await cluster.query(query).catch((err) => {console.log(err)})
-        console.log('Collection Creation Successful...');
+        const queryResult = await cluster.query(query).catch((err) => {console.log(err.context)})
     }
 
-    async function insertIntoCollection(collection, document, playerID)
+    async function insertIntoCollection(collection, document, playerID, scope)
     {
-        let myCollection = bucket.collection(collection)
+        const configuredScope = bucket.scope(scope);
+        const myCollection = configuredScope.collection(collection);
         const key = `player_${playerID}`
-        const result = await myCollection.insert(key, document).catch((err) => {console.error(err)});
-        console.log('Insert Into Collection Successful...');
+        const result = await myCollection.insert(key, document).catch((err) => {console.error(err.context)}).finally('Insert Successful');
     }
 
-    function findTeamByID(id)
+    function findTeamById(id)
     {
-        return teams[id]
+        return teamsByID[id]
+    }
+
+    function findTeamConf(id)
+    {
+        return teamsByConference[id];
     }
 
 }
